@@ -1,15 +1,11 @@
-# Sonic the Hedgehog 2 (16-bit) Disassembly
+# Sonic the Hedgehog 2 (16-bit) Disassembly with The Prototype Layout System.
 
-For an overview of the folder structure, [refer to this page](https://info.sonicretro.org/SCHG_How-to:Disassembly_Folder_Structure#Sonic_2).
+Starting from The September 14 1992 prototype, the game unified both the layout and the BG in one file, and made it Kosinski compressed. Older prototypes, such as the Simon Wai, used the Sonic 1 layout system, which had both layouts uncompressed, and in seperate files. As the name suggests, this adds the Sonic 1/Sonic 2 prototype layout system, and makes them uncompressed. Currently there isn't any work done yet.
 
-Also See: http://info.sonicretro.org/Disassemblies
+# Why would you need this?
 
-To build this, use build.bat if you're a Windows user, or build.lua otherwise. The built ROM will be called 's2built.bin'.
-
-The Lua script requires Lua version 5.3. Earlier versions will cause errors about integer divisions ('//') and bit-shifts ('<<', '>>') not being recognised.
+You would need this if you are adding the Sonic 2 prototype layouts to the final version of Sonic 2 OR you are porting over the Sonic 1 zones.
 
 # DISCLAIMER
 Any and all content presented in this repository is presented for informational and educational purposes only.
-Commercial usage is expressly prohibited. Sonic Retro claims no ownership of any code in these repositories.
-You assume any and all responsibility for using this content responsibly. Sonic Retro claims no responsibiliy or warranty.
-
+All credits for the original disassembly go to Sonic Retro, and SEGA for the game.
