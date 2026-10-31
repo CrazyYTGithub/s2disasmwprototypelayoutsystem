@@ -20164,202 +20164,50 @@ loadZoneBlockMaps:
 
 
 loadLevelLayout:
-	moveq	#0,d0
-	move.w	(Current_ZoneAndAct).w,d0
-	ror.b	#1,d0
-	lsr.w	#6,d0
-	lea	(Off_Level).l,a0
-	move.w	(a0,d0.w),d0
-	lea	(a0,d0.l),a0
-	lea	(Level_Layout).w,a1
-	jmpto	JmpTo_KosDec
-; End of function loadLevelLayout
-
-; ===========================================================================
-
-;loadLevelLayout_Sonic1:
-	; This loads level layout data in Sonic 1's format. Curiously, this
-	; function has been changed since Sonic 1: in particular, it repeats
-	; the rows of the source data to fill the rows of the destination
-	; data, which provides some explanation for why so many of Sonic 2's
-	; backgrounds are repeated in their layout data. This repeating is
-	; needed to prevent Hidden Palace Zone's background from disappearing
-	; when the player moves to the left.
-
-	; Clear layout data.
-	lea	(Level_Layout).w,a3
-	move.w	#bytesToLcnt(Level_Layout_End-Level_Layout),d1
-	moveq	#0,d0
--	move.l	d0,(a3)+
-	dbf	d1,-
-
-	; The rows of the foreground and background layouts are interleaved
-	; in memory. This is done here:
-	lea	(Level_Layout).w,a3	; Foreground.
-	moveq	#0,d1			; Index into 'Off_Level' to get level foreground layout.
-	bsr.w	.loadLayout
-	lea	(Level_Layout+$80).w,a3	; Background.
-	moveq	#2,d1			; Index into 'Off_Level' to get level background layout.
-
-; ||||||||||||||| S U B R O U T I N E |||||||||||||||||||||||||||||||||||||||
-
-; sub_E4A2:
-.loadLayout:
-	; This expects 'Off_Level' to be in the format that it was in
-	; Sonic 1.
-	moveq	#0,d0
-	move.w	(Current_ZoneAndAct).w,d0
-	ror.b	#1,d0
-	lsr.w	#5,d0
-	add.w	d1,d0
-	lea	(Off_Level).l,a1
-	move.w	(a1,d0.w),d0
-	lea	(a1,d0.l),a1
-
-	moveq	#0,d1
-	move.w	d1,d2
-	move.b	(a1)+,d1	; Layout width.
-	move.b	(a1)+,d2	; Layout height.
-	move.l	d1,d5
-	addq.l	#1,d5
-	moveq	#0,d3
-	move.w	#$80,d3	; Size of layout row in memory.
-	divu.w	d5,d3	; Get how many times to repeat the source row to fill the destination row.
-	subq.w	#1,d3	; Turn into loop counter.
-
-.nextRow:
-	movea.l	a3,a0
-
-	move.w	d3,d4
-.repeatRow:
-	move.l	a1,-(sp)
-
-	move.w	d1,d0
-.nextByte:
-	move.b	(a1)+,(a0)+
-	dbf	d0,.nextByte
-
-	movea.l	(sp)+,a1
-	dbf	d4,.repeatRow
-
-	lea	(a1,d5.w),a1	; Next row in source data.
-	lea	$100(a3),a3	; Next row in destination data.
-	dbf	d2,.nextRow
-
-	rts
-; End of function .loadLayout
-
-; ===========================================================================
-
-;ConvertChunksFrom256x256To128x128:
-	; This converts Sonic 1-style 256x256 chunks to Sonic 2-style 128x128
-	; chunks.
-
-	; Destination of 128x128 chunks.
-	lea	($FE0000).l,a1
-	lea	($FE0000+8*8*2).l,a2
-	; Source of 256x256 chunks.
-	lea	(Chunk_Table).l,a3
-
-	move.w	#64-1,d1	; Process 64 256x256 chunks.
--	bsr.w	ConvertHalfOf256x256ChunkToTwo128x128Chunks
-	bsr.w	ConvertHalfOf256x256ChunkToTwo128x128Chunks
-	dbf	d1,-
-
-	lea	($FE0000).l,a1
-	lea	($FF0000).l,a2
-
-	; Insert a blank chunk at the start of chunk table.
-	move.w	#bytesToWcnt(8*8*2),d1
--	move.w	#0,(a2)+
-	dbf	d1,-
-
-	; Copy the actual chunks to after this blank chunk.
-	move.w	#bytesToWcnt($8000-(8*8*2)),d1
--	move.w	(a1)+,(a2)+
-	dbf	d1,-
-
-	rts
-; ===========================================================================
-
-;EliminateChunkDuplicates:
-	; This is a chunk de-duplicator.
-
-	; Copy first chunk into 'Chunk_Table'.
-	lea	($FE0000).l,a1
-	lea	(Chunk_Table).l,a3
-
-	moveq	#bytesToLcnt(8*8*2),d0
--	move.l	(a1)+,(a3)+
-	dbf	d0,-
-
-	moveq	#0,d7	; This holds how many chunks have been copied minus 1.
-	lea	($FE0000).l,a1
-	move.w	#$100-1,d5	; $100 chunks
-;loc_E55A:
-.nextChunk:
-	lea	(Chunk_Table).l,a3
-	move.w	d7,d6
-
-.doNextComparison:
-	movem.l	a1-a3,-(sp)
-
-	; Compare chunks.
-	move.w	#bytesToWcnt(8*8*2),d0
--	cmpm.w	(a1)+,(a3)+
-	bne.s	+
-	dbf	d0,-
-
-	; The chunks match.
-	movem.l	(sp)+,a1-a3
-	adda.w	#8*8*2,a1
-	dbf	d5,.nextChunk
-
-	bra.s	++
-; ===========================================================================
-+
-	; No match: check the next chunk.
-	movem.l	(sp)+,a1-a3
-	adda.w	#8*8*2,a3
-	dbf	d6,.doNextComparison
-
-	; Not a single match.
-
-	; Add this chunk to the output.
-	moveq	#bytesToLcnt(8*8*2),d0
--	move.l	(a1)+,(a3)+
-	dbf	d0,-
-
-	addq.l	#1,d7	; One more chunk has been added.
-	dbf	d5,.nextChunk
-/
-	bra.s	-	; infinite loop
-
-; ||||||||||||||| S U B R O U T I N E |||||||||||||||||||||||||||||||||||||||
-
-; sub_E59C:
-ConvertHalfOf256x256ChunkToTwo128x128Chunks:
-	moveq	#8-1,d0	 ; 8 rows.
--
-	; Do a row of chunk 1 (a chunk is 8 blocks wide and tall).
-	move.l	(a3)+,(a1)+
-	move.l	(a3)+,(a1)+
-	move.l	(a3)+,(a1)+
-	move.l	(a3)+,(a1)+
-	; Do a row of chunk 2.
-	move.l	(a3)+,(a2)+
-	move.l	(a3)+,(a2)+
-	move.l	(a3)+,(a2)+
-	move.l	(a3)+,(a2)+
-	dbf	d0,-
-
-	adda.w	#8*8*2,a1
-	adda.w	#8*8*2,a2
-
-	rts
-; End of function ConvertHalfOf256x256ChunkToTwo128x128Chunks
-
-; ===========================================================================
+		lea	(Level_Layout).w,a3
+		move.w	#bytesToLcnt((Level_Layout_End-Level_Layout)-((Level_Layout)&1)),d1
+		moveq	#0,d0
+.loop:	move.l	d0,(a3)+
+		dbf	d1,.loop
+		lea	(Level_Layout).w,A3 ; Foreground
+		moveq	#0,d1
+		bsr.w	Interleave_Level_Layout ; loc_78A6
+		lea	(Level_Layout+$80).w,A3 ; Background
+		moveq	#2,d1
+Interleave_Level_Layout: ; loc_78A6:
+		moveq	#0,d0
+		move.w	(Current_ZoneAndAct).w,d0
+		ror.b	#1,d0
+		lsr.w	#5,d0
+		add.w	d1,d0
+		lea	(Off_Level).l,A1   ; loc_3334E
+		move.w	(A1,d0.w),d0
+		lea	(A1,d0.l),A1
+		moveq	#0,d1
+		move.w	d1,d2
+		move.b	(a1)+,d1
+		move.b	(a1)+,d2
+		move.l	d1,d5
+		addq.l	#1,d5
+		moveq	#0,d3
+		move.w	#$80,d3
+		divu.w	d5,d3
+		subq.w	#1,d3
+loc_78d6:
+		move.l	A3,A0
+		move.w	d3,d4
+loc_78DA:
+		move.l	A1,-(sp)
+		move.w	d1,d0
+loc_78DE:
+		move.b	(a1)+,(a0)+
+		dbf	d0,loc_78DE
+		move.l	(sp)+,A1
+		dbf	d4,loc_78DA
+		lea	(A1,d5),A1
+		lea	$100(a3),A3
+		dbf	d2,loc_78d6
+		rts
 
 	jmpTos JmpTo_PalLoad_Now,JmpTo_LoadPLC,JmpTo_KosDec
 
@@ -90371,80 +90219,129 @@ ColP_Invalid:
 ; Two entries per zone, pointing to the level layouts for acts 1 and 2 of each zone
 ; respectively.
 ;---------------------------------------------------------------------------------------
-Off_Level: zoneOrderedOffsetTable 2,2
+Off_Level: zoneOrderedOffsetTable 2,4
 	; EHZ
 	zoneOffsetTableEntry.w Level_EHZ1	; Act 1
+	zoneOffsetTableEntry.w Level_EHZBG
 	zoneOffsetTableEntry.w Level_EHZ2	; Act 2
+	zoneOffsetTableEntry.w Level_EHZBG	
 	; Zone 1
 	zoneOffsetTableEntry.w Level_Invalid	; Act 1
+	zoneOffsetTableEntry.w Level_InvalidBG
 	zoneOffsetTableEntry.w Level_Invalid	; Act 2
+	zoneOffsetTableEntry.w Level_InvalidBG
 	; WZ
 	zoneOffsetTableEntry.w Level_Invalid	; Act 1
+	zoneOffsetTableEntry.w Level_InvalidBG
 	zoneOffsetTableEntry.w Level_Invalid	; Act 2
+	zoneOffsetTableEntry.w Level_InvalidBG
 	; Zone 3
 	zoneOffsetTableEntry.w Level_Invalid	; Act 1
+	zoneOffsetTableEntry.w Level_InvalidBG
 	zoneOffsetTableEntry.w Level_Invalid	; Act 2
+	zoneOffsetTableEntry.w Level_InvalidBG
 	; MTZ
 	zoneOffsetTableEntry.w Level_MTZ1	; Act 1
+	zoneOffsetTableEntry.w Level_MTZBG	
 	zoneOffsetTableEntry.w Level_MTZ2	; Act 2
+	zoneOffsetTableEntry.w Level_MTZBG	
 	; MTZ
 	zoneOffsetTableEntry.w Level_MTZ3	; Act 3
+	zoneOffsetTableEntry.w Level_MTZBG	
 	zoneOffsetTableEntry.w Level_MTZ3	; Act 4
+	zoneOffsetTableEntry.w Level_MTZBG	
 	; WFZ
 	zoneOffsetTableEntry.w Level_WFZ	; Act 1
+	zoneOffsetTableEntry.w Level_WFZBG
 	zoneOffsetTableEntry.w Level_WFZ	; Act 2
+	zoneOffsetTableEntry.w Level_WFZBG	
 	; HTZ
 	zoneOffsetTableEntry.w Level_HTZ1	; Act 1
+	zoneOffsetTableEntry.w Level_HTZ1_BG	
 	zoneOffsetTableEntry.w Level_HTZ2	; Act 2
+	zoneOffsetTableEntry.w Level_HTZ2_BG	
 	; HPZ
 	zoneOffsetTableEntry.w Level_HPZ1	; Act 1
+	zoneOffsetTableEntry.w Level_HPZ_BG	
 	zoneOffsetTableEntry.w Level_HPZ1	; Act 2
+	zoneOffsetTableEntry.w Level_HPZ_BG		
 	; Zone 9
 	zoneOffsetTableEntry.w Level_Invalid	; Act 1
+	zoneOffsetTableEntry.w Level_InvalidBG
 	zoneOffsetTableEntry.w Level_Invalid	; Act 2
+	zoneOffsetTableEntry.w Level_InvalidBG
 	; OOZ
 	zoneOffsetTableEntry.w Level_OOZ1	; Act 1
+	zoneOffsetTableEntry.w Level_OOZBG
 	zoneOffsetTableEntry.w Level_OOZ2	; Act 2
+	zoneOffsetTableEntry.w Level_OOZBG	
 	; MCZ
 	zoneOffsetTableEntry.w Level_MCZ1	; Act 1
+	zoneOffsetTableEntry.w Level_MCZBG	
 	zoneOffsetTableEntry.w Level_MCZ2	; Act 2
+	zoneOffsetTableEntry.w Level_MCZBG	
 	; CNZ
 	zoneOffsetTableEntry.w Level_CNZ1	; Act 1
+	zoneOffsetTableEntry.w Level_CNZBG	
 	zoneOffsetTableEntry.w Level_CNZ2	; Act 2
+	zoneOffsetTableEntry.w Level_CNZBG	
 	; CPZ
 	zoneOffsetTableEntry.w Level_CPZ1	; Act 1
+	zoneOffsetTableEntry.w Level_CPZBG	
 	zoneOffsetTableEntry.w Level_CPZ2	; Act 2
+	zoneOffsetTableEntry.w Level_CPZBG	
 	; DEZ
 	zoneOffsetTableEntry.w Level_DEZ	; Act 1
+	zoneOffsetTableEntry.w Level_DEZBG	
 	zoneOffsetTableEntry.w Level_DEZ	; Act 2
+	zoneOffsetTableEntry.w Level_DEZBG	
 	; ARZ
 	zoneOffsetTableEntry.w Level_ARZ1	; Act 1
+	zoneOffsetTableEntry.w Level_ARZ1_BG	
 	zoneOffsetTableEntry.w Level_ARZ2	; Act 2
+	zoneOffsetTableEntry.w Level_ARZ2_BG	
 	; SCZ
 	zoneOffsetTableEntry.w Level_SCZ	; Act 1
+	zoneOffsetTableEntry.w Level_SCZBG
 	zoneOffsetTableEntry.w Level_SCZ	; Act 2
+	zoneOffsetTableEntry.w Level_SCZBG	
     zoneTableEnd
 
-; These are all compressed in the Kosinski format.
 Level_Invalid:
-Level_EHZ1:	BINCLUDE	"level/layout/EHZ_1.kos"
+Level_WFZBG:
+Level_HTZ1_BG:
+Level_HTZ2_BG:
+Level_OOZBG:
+Level_MCZBG:
+Level_CNZBG:
+Level_CPZBG:
+Level_DEZBG:
+Level_SCZBG:
+Level_EHZ1:	BINCLUDE	"level/layout/EHZ_1.bin"
 	even
-Level_EHZ2:	BINCLUDE	"level/layout/EHZ_2.kos"
+Level_EHZ2:	BINCLUDE	"level/layout/EHZ_2.bin"
 	even
-Level_MTZ1:	BINCLUDE	"level/layout/MTZ_1.kos"
+Level_InvalidBG:	
+Level_EHZBG:	BINCLUDE	"level/layout/EHZ_BG.bin"
+	even	
+Level_MTZ1:	BINCLUDE	"level/layout/MTZ_1.bin"
 	even
-Level_MTZ2:	BINCLUDE	"level/layout/MTZ_2.kos"
+Level_MTZ2:	BINCLUDE	"level/layout/MTZ_2.bin"
 	even
-Level_MTZ3:	BINCLUDE	"level/layout/MTZ_3.kos"
+Level_MTZBG:	BINCLUDE	"level/layout/MTZ_BG.bin"
+	even	
+Level_MTZ3:	BINCLUDE	"level/layout/MTZ_3.bin"
 	even
-Level_WFZ:	BINCLUDE	"level/layout/WFZ.kos"
+Level_WFZ:	BINCLUDE	"level/layout/WFZ.bin"
 	even
+;Level_WFZBG:	
 Level_HTZ1:	BINCLUDE	"level/layout/HTZ_1.kos"
 	even
 Level_HTZ2:	BINCLUDE	"level/layout/HTZ_2.kos"
 	even
 Level_HPZ1:	;BINCLUDE	"level/layout/HPZ_1.kos"
 	;even
+Level_HPZ_BG:	
 Level_OOZ1:	BINCLUDE	"level/layout/OOZ_1.kos"
 	even
 Level_OOZ2:	BINCLUDE	"level/layout/OOZ_2.kos"
@@ -90463,10 +90360,14 @@ Level_CPZ2:	BINCLUDE	"level/layout/CPZ_2.kos"
 	even
 Level_DEZ:	BINCLUDE	"level/layout/DEZ.kos"
 	even
-Level_ARZ1:	BINCLUDE	"level/layout/ARZ_1.kos"
+Level_ARZ1:	BINCLUDE	"level/layout/ARZ_1.bin"
 	even
-Level_ARZ2:	BINCLUDE	"level/layout/ARZ_2.kos"
+Level_ARZ2:	BINCLUDE	"level/layout/ARZ_2.bin"
 	even
+Level_ARZ1_BG:	BINCLUDE	"level/layout/ARZ_1_BG.bin"
+	even
+Level_ARZ2_BG:	BINCLUDE	"level/layout/ARZ_2_BG.bin"
+	even	
 Level_SCZ:	BINCLUDE	"level/layout/SCZ.kos"
 	even
 
